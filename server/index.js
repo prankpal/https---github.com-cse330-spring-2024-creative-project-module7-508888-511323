@@ -12,12 +12,38 @@ const configuration = new Configuration({
     },
   },
 });
+
+
 const plaidClient = new PlaidApi(configuration);
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+// Route to fetch transactions
+app.post('/transactions', async (req, res) => {
+    const { access_token } = req.body;  // This token should be stored securely and associated with a user session
+    const startDate = 'start-date';  // Adjust these dates based on your requirements
+    const endDate = 'end-date';
+  
+    try {
+      const response = await plaidClient.transactionsGet({
+        access_token,
+        start_date: startDate,
+        end_date: endDate,
+        options: {
+          count: 10,  // Adjust the number of transactions to fetch
+          offset: 0,
+        }
+      });
+  
+      // Send the transactions data to the client
+      res.json(response.data.transactions);
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
 app.post("/hello", (request, response) => {
     response.json({message: "hello " + request.body.name});
@@ -59,43 +85,43 @@ app.post('/create_link_token', async function (request, response) {
     }
   });
 
-  app.post('/transactions_sync', async function (request, response) {
-    const accessToken = request.body.access_token;
-    let cursor = request.body.cursor || null;  // Receive cursor from client or start with null
+//   app.post('/transactions_sync', async function (request, response) {
+//     const accessToken = request.body.access_token;
+//     let cursor = request.body.cursor || null;  // Receive cursor from client or start with null
 
-    let addedTransactions = [];
-    let modifiedTransactions = [];
-    let removedTransactions = [];
-    let hasMore = true;
+//     let addedTransactions = [];
+//     let modifiedTransactions = [];
+//     let removedTransactions = [];
+//     let hasMore = true;
 
-    try {
-        while (hasMore) {
-            const syncRequest = {
-                access_token: accessToken,
-                cursor: cursor,
-            };
-            const syncResponse = await plaidClient.transactionsSync(syncRequest);
-            const data = syncResponse.data;
+//     try {
+//         while (hasMore) {
+//             const syncRequest = {
+//                 access_token: accessToken,
+//                 cursor: cursor,
+//             };
+//             const syncResponse = await plaidClient.transactionsSync(syncRequest);
+//             const data = syncResponse.data;
 
-            addedTransactions = addedTransactions.concat(data.added);
-            modifiedTransactions = modifiedTransactions.concat(data.modified);
-            removedTransactions = removedTransactions.concat(data.removed);
-            hasMore = data.has_more;
-            cursor = data.next_cursor;  // Update cursor for next page
-        }
+//             addedTransactions = addedTransactions.concat(data.added);
+//             modifiedTransactions = modifiedTransactions.concat(data.modified);
+//             removedTransactions = removedTransactions.concat(data.removed);
+//             hasMore = data.has_more;
+//             cursor = data.next_cursor;  // Update cursor for next page
+//         }
 
-        // Respond with all transactions
-        response.json({
-            added: addedTransactions,
-            modified: modifiedTransactions,
-            removed: removedTransactions,
-            cursor: cursor  // Send back the latest cursor
-        });
-    } catch (error) {
-        console.error("Error fetching transactions: ", error);
-        response.status(500).send("Error fetching transactions");
-    }
-});
+//         // Respond with all transactions
+//         response.json({
+//             added: addedTransactions,
+//             modified: modifiedTransactions,
+//             removed: removedTransactions,
+//             cursor: cursor  // Send back the latest cursor
+//         });
+//     } catch (error) {
+//         console.error("Error fetching transactions: ", error);
+//         response.status(500).send("Error fetching transactions");
+//     }
+// });
 
   app.post('/exchange_public_token', async function (
     request,
